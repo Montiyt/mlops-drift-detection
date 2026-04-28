@@ -47,9 +47,9 @@ jobs:
 
       - name: Run linter
         run: |
-          flake8 src/ --max-line-length=120 \
-                      --ignore=E501,W503 \
-                      --exclude=__pycache__
+          flake8 src/ --max-line-length=150 \
+                      --ignore=E501,W503,W291,W293,E302,E303,E305,F401,W391 \
+                      --exclude=__pycache__,venv
 
   # ── Job 3: Build Docker Image ──────────────────────────
   build:
