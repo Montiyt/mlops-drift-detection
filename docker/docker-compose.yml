@@ -1,0 +1,73 @@
+
+services:
+
+  # ── FastAPI prediction server ──────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: taxi-drift-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data/processed:/app/data/processed
+      - ../mlflow:/app/mlflow
+    networks:
+      - mlops-network
+    restart: unless-stopped
+
+  # ── MLflow tracking server ─────────────────────────────
+  mlflow:
+    image: python:3.10-slim
+    container_name: mlflow-server
+    working_dir: /app
+    volumes:
+      - ../mlflow:/app/mlflow
+      - ../requirements.txt:/app/requirements.txt
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "pip install mlflow -q &&
+               mlflow server
+               --backend-store-uri /app/mlflow
+               --host 0.0.0.0
+               --port 5000"
+    networks:
+      - mlops-network
+    restart: unless-stopped
+
+  # ── Prometheus ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - mlops-network
+    restart: unless-stopped
+
+  # ── Grafana ────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - mlops-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+networks:
+  mlops-network:
+    driver: bridge
+
+volumes:
+  grafana-storage:
